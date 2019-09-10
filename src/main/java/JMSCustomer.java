@@ -5,6 +5,9 @@ import javax.jms.*;
 /**
  * @author zcg
  * @date 2019/9/10 0010 - 18:36
+ *  1、事务级别大于签收
+ *  2、事务偏向生产者，签收偏向消费者
+ *
  */
 public class JMSCustomer {
     public static final String MQ_URL = "tcp://192.168.19.130:61616";
@@ -16,6 +19,13 @@ public class JMSCustomer {
         Connection connection = activeMQConnectionFactory.createConnection();
         connection.start();
 
+        /**
+         * true 表示开启事务，需要commit才能消费掉中间件中的信息，如果不commit不然会导致重复消费的现象
+         * 事务开启的情况下，忽略签收影响 ，不过还是需要设置参数
+         * false,
+         * Session.AUTO_ACKNOWLEDGE    自动签收，每次调用receive()方法即消费一条消息
+         * Session.CLIENT_ACKNOWLEDGE  手动签收，需要调用textMessage.acknowledge()消费信息
+         */
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 
         Queue queue = session.createQueue(MYQUEUE);
@@ -31,6 +41,8 @@ public class JMSCustomer {
             textMessage = (TextMessage) messageConsumer.receive();
             if(textMessage!=null) {
                 System.out.println("消费--" + textMessage.getText());
+                textMessage.acknowledge();
+                //session.commit(); //开启事务情况下，需要commit
             }else{
                 break;
             }
